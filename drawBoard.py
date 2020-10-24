@@ -2,6 +2,7 @@ from working import solve,find_empty,generate_board,whitespaces
 import pygame
 import time
 pygame.font.init()
+restart = False
 
 class Grid:
     #Initial Board
@@ -70,9 +71,14 @@ class Grid:
 
     def sketch(self,key):
         if self.selected and key:
-            row = self.selected[0]
-            col = self.selected[1]
+            row, col = self.selected
             self.cubes[row][col].setTemp(key)
+
+    def clear(self):
+        row, col = self.selected
+        if self.cubes[row][col].value == 0:
+            self.cubes[row][col].setTemp(0)
+
 
     def place(self,val):
         i,j = self.selected
@@ -114,7 +120,7 @@ class Cube:
             text = fnt.render(str(self.temp), 1, (128,128,128))
             win.blit(text, (x+5, y+5))
         
-        if self.value != 0:
+        elif not(self.value == 0):
             text = fnt.render(str(self.value),1,(0,0,0))
             win.blit(text,(x + (gap/2 - text.get_width()/2),y + (gap/2 - text.get_height()/2) ) )
         
@@ -174,12 +180,16 @@ def redraw(win,board,strikes,play_time):
 
 def formatTime(val):
     secs = val%60
-    min = secs//60
+    min = val//60
+    min = min%60
     hour = min//60
+    seconds = ""
+    minutes = "0"+str(min) if secs<10 else str(min)
+    seconds = "0"+str(secs) if secs<10 else str(secs)
     if hour == 0:
-        string = str(min)+":"+str(secs)
+        string = minutes+":"+seconds
     else:
-        string = str(hour)+":"+str(min)+":"+str(secs)
+        string = str(hour)+":"+minutes+":"+seconds
     return string
 
 def main():
@@ -195,8 +205,9 @@ def main():
         play_time = round(time.time() - start)
         
         for event in pygame.event.get():
+            # Quit Game
             if event.type == pygame.QUIT:
-                run = False
+                return False
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
@@ -235,9 +246,42 @@ def main():
                     key = 8
                 if event.key == pygame.K_KP9:
                     key = 9
-                if event.key == pygame.K_DELETE:
-                    key = 0
                 
+                # Arrow Key controls 
+                if event.key == pygame.K_UP:
+                    if board.selected:
+                        row,col = board.selected
+                        if row > 0:
+                            board.select(row-1,col)
+                            key = 0
+
+                if event.key == pygame.K_DOWN:
+                    if board.selected:
+                        row,col = board.selected
+                        if row < 8:
+                            board.select(row+1,col)
+                            key = 0
+
+                if event.key == pygame.K_LEFT:
+                    if board.selected:
+                        row,col = board.selected
+                        if col > 0:
+                            board.select(row,col-1)
+                            key = 0
+
+                if event.key == pygame.K_RIGHT:
+                    if board.selected:
+                        row,col = board.selected
+                        if col < 8:
+                            board.select(row,col+1)
+                            key = 0
+
+                # Delete Value
+                if event.key == pygame.K_DELETE or event.key == pygame.K_BACKSPACE :
+                    key = 0
+                    board.clear()
+                
+                # Confirm Value
                 if event.key == pygame.K_RETURN:
                     i,j = board.selected
                     if board.cubes[i][j].getTemp() != 0:
@@ -248,11 +292,22 @@ def main():
                             strikes += 1
                     key = None
 
+                # Solve GUI Board
                 if event.key == pygame.K_SPACE:
                     board.solve_board()            
                 
+                # Restart Game
+                if event.key == pygame.K_r and event.mod & pygame.KMOD_CTRL:
+                    print("Restart")
+                    return True
+
+                # Shortcut to Quit Game
+                if event.key == pygame.K_q and event.mod & pygame.KMOD_CTRL:
+                    return False
+                
                 board.sketch(key)     
 
+            # Mouse Click
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 coordinates = board.getCoordinates(pos)
@@ -267,5 +322,6 @@ def main():
         redraw(win,board,strikes,play_time)
         pygame.display.update()
 
-main()
+if main():
+    main()
 pygame.quit()
